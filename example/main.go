@@ -60,7 +60,18 @@ func main() {
 			continue
 		}
 		for _, o := range out.Hits.Hits {
-			log.Println(o)
+			if o.Source == nil {
+				continue
+			}
+			switch obj := o.Source.(type) {
+			case *TestStruct1:
+				log.Printf("type[%s] val=%v\n", "*TestStruct1", obj)
+			case *TestStruct2:
+				log.Printf("type[%s] val=%v\n", "*TestStruct2", obj)
+			default:
+				log.Println("unknow")
+
+			}
 		}
 	}
 }
