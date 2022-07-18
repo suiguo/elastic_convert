@@ -15,37 +15,43 @@ type TestStruct1 struct {
 }
 
 type TestStruct2 struct {
-	Id  string    `json:"id"`
+	Id  int       `json:"id"`
 	Tag time.Time `json:"tag"`
 }
 
 func main() {
 	cfg := &client.ElasticCfg{
-		Host: []string{"127.0.0.1:9200"},
+		Host: []string{"http://127.0.0.1:9200"},
 	}
 	cli, err := client.GetInstanceElastic(cfg, true)
 	if err != nil {
 		panic(err)
 	}
 	for i := 0; i < 100; i++ {
-		cli.InsertNewRcord("test1_index1", i, &TestStruct1{
+		err := cli.InsertNewRcord("index_1", i, &TestStruct1{
 			Id:  i,
 			Tag: fmt.Sprintf("idx:%d", i),
 		})
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	for i := 0; i < 100; i++ {
-		cli.InsertNewRcord("test1_index2", i, &TestStruct2{
-			Id:  fmt.Sprintf("idx:[%d]", i),
+		err := cli.InsertNewRcord("index_2", i, &TestStruct2{
+			Id:  i,
 			Tag: time.Now(),
 		})
+		if err != nil {
+			log.Println(err)
+		}
 	}
-	datas, err := cli.Search([]string{"test1_index1", "test1_index2"}, client.WithSort("id", client.Desc))
+	datas, err := cli.Search([]string{"index_1", "index_2"}, client.WithSort("id", client.Desc))
 	if err != nil {
 		panic(err)
 	}
 	for _, d := range datas {
-		out, err := elasticconvert.Result(d, []string{"test1_index1", "test1_index2"}, []any{&TestStruct1{}, &TestStruct2{}})
+		out, err := elasticconvert.Result(d, []string{"index_1", "index_2"}, []any{&TestStruct1{}, &TestStruct2{}})
 		if err != nil {
 			log.Println(err)
 			continue
@@ -54,7 +60,7 @@ func main() {
 			continue
 		}
 		for _, o := range out.Hits.Hits {
-			log.Panicln(o)
+			log.Println(o)
 		}
 	}
 }

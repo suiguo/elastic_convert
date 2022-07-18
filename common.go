@@ -11,7 +11,11 @@ var ErrorParamsLen error = fmt.Errorf("")
 
 //data es resp    len(indexs) = len(targets)
 func Result(data []byte, indexs []string, targets []interface{}) (out *model.Result, err error) {
-	out = &model.Result{}
+	out = &model.Result{
+		Hits: model.Hits{
+			Hits: make([]*model.MarshalData, 0),
+		},
+	}
 	if len(indexs) != len(targets) {
 		return out, ErrorParamsLen
 	}

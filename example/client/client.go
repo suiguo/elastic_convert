@@ -183,7 +183,6 @@ func GetInstanceElastic(cfg *ElasticCfg, debug bool) (*ElasticClient, error) {
 			if err != nil {
 				return nil, err
 			}
-			// fmt.Println(resp)
 			lock.Lock()
 			r = &ElasticClient{Client: cli}
 			instanceMap[string(key)] = r
@@ -211,11 +210,9 @@ func (e *ElasticClient) InsertNewRcord(index string, id int, data interface{}) e
 	}
 	res, err := e.Client.Index(index, bytes.NewBuffer(body), tmp...)
 	if err != nil {
-		// fmt.Println(err)
 		return err
 	}
 	defer res.Body.Close()
-	// fmt.Println(res)
 	return nil
 }
 
@@ -230,15 +227,14 @@ func (e *ElasticClient) Search(index []string, parm ...SearchParam) ([][]byte, e
 	}
 	param_str := search_param.packageOut()
 	opts := make([]func(*esapi.SearchRequest), 0)
+	opts = append(opts, e.Client.Search.WithIndex(index...))
 	if len(search_param.sortArgs) > 0 {
 		opts = append(opts, e.Client.Search.WithSort(search_param.sortArgs...))
 	}
+	opts = append(opts, e.Client.Search.WithScroll(time.Second*60))
 	if param_str != "" {
 		opts = append(opts,
-			e.Client.Search.WithIndex(index...),
 			e.Client.Search.WithQuery(param_str),
-			e.Client.Search.WithScroll(time.Second*60),
-			e.Client.Search.WithLenient(true),
 		)
 	}
 	resp_data := make([][]byte, 0)
@@ -248,7 +244,7 @@ func (e *ElasticClient) Search(index []string, parm ...SearchParam) ([][]byte, e
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("statsu code err")
+		return nil, fmt.Errorf("statsu code err[%d]", response.StatusCode)
 	}
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -262,6 +258,9 @@ func (e *ElasticClient) Search(index []string, parm ...SearchParam) ([][]byte, e
 	resp_data = append(resp_data, data)
 	scr_id := scroll.ScrollID
 	for {
+		if scr_id == "" {
+			return resp_data, nil
+		}
 		d, s, e := e.Scroll(scr_id)
 		if e != nil {
 			return nil, e
@@ -284,9 +283,8 @@ func (e *ElasticClient) Scroll(srcroll_id string) ([]byte, string, error) {
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		return nil, "", fmt.Errorf("statsu code err")
+		return nil, "", fmt.Errorf("statsu code err[%d]", response.StatusCode)
 	}
-	// fmt.Println(response)
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, "", err

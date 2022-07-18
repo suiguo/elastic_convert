@@ -46,24 +46,25 @@ func (h *MarshalData) UnmarshalJSON(data []byte) (ret error) {
 		return err
 	}
 	rtype, ok := ModelMap.Load(helpVal.Index)
-	retype := reflect.TypeOf(rtype)
-	if retype.Kind() == reflect.Pointer {
-		retype = retype.Elem()
-	}
-	newTmp := reflect.New(retype)
-	if !ok && !newTmp.CanInterface() {
-		err = json.Unmarshal(data, tmp)
-		if err != nil {
-			return err
+	if ok {
+		retype := reflect.TypeOf(rtype)
+		if retype.Kind() == reflect.Pointer {
+			retype = retype.Elem()
 		}
-		h.ID = tmp.ID
-		h.Index = tmp.Index
-		h.Source = tmp.Source
-		return nil
+		newTmp := reflect.New(retype)
+		if newTmp.CanInterface() {
+			val := newTmp.Interface()
+			tmp.Source = val
+			err = json.Unmarshal(data, tmp)
+			if err != nil {
+				return err
+			}
+			h.ID = tmp.ID
+			h.Index = tmp.Index
+			h.Source = tmp.Source
+			return nil
+		}
 	}
-
-	val := newTmp.Interface()
-	tmp.Source = val
 	err = json.Unmarshal(data, tmp)
 	if err != nil {
 		return err
